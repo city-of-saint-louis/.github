@@ -13,8 +13,11 @@ jobs:
       - name: Download config
         run: |
           curl -O https://raw.githubusercontent.com/city-of-saint-louis/.github/main/config/allowed-prefixes.yml
+          curl -O https://raw.githubusercontent.com/city-of-saint-louis/.github/main/config/branch-name-pattern.yml
           PREFIXES=$(jq -r '.allowed_prefixes | join(",")' allowed-prefixes.yml)
+          PATTERN=$(jq -r '.pattern' branch-name-pattern.yml)
           echo "prefixes=$PREFIXES" >> $GITHUB_ENV
+          echo "pattern=$PATTERN" >> $GITHUB_ENV
 
       - name: Check branch prefix
         id: branch_prefix_check
@@ -55,7 +58,8 @@ jobs:
           done
           PREFIX="${{ steps.branch_prefix_check.outputs.prefix }}"
           REST="${BRANCH_NAME#$PREFIX}"
-          if [[ ! "$REST" =~ ^[a-z0-9-]+$ ]]; then
-            echo "::error ::Branch name '$BRANCH_NAME' must use only lowercase letters, numbers, and dashes after the prefix '$PREFIX'"
+          PATTERN="${{ env.pattern }}"
+          if [[ ! "$REST" =~ $PATTERN ]]; then
+            echo "::error ::Branch name '$BRANCH_NAME' must match pattern '$PATTERN' after the prefix '$PREFIX'"
             exit 1
           fi
