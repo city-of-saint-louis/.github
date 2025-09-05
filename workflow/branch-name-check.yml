@@ -1,0 +1,34 @@
+- name: Download config
+  run: |
+    curl -O https://raw.githubusercontent.com/city-of-saint-louis/.github/main/config/allowed-prefixes.yml
+    PREFIXES=$(jq -r '.allowed_prefixes | join(",")' allowed-prefixes.yml)
+    echo "prefixes=$PREFIXES" >> $GITHUB_ENV
+
+- name: Check branch prefix
+  id: prefix_check
+  run: |
+    BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+    MATCHED=false
+    PREFIX=""
+    for prefix in $(echo ${{ env.prefixes }} | tr "," "\n"); do
+      if [[ "$BRANCH_NAME" == "$prefix"* ]]; then
+        MATCHED=true
+        PREFIX="$prefix"
+        break
+      fi
+    done
+    echo "prefix=$PREFIX" >> $GITHUB_OUTPUT
+    if [ "$MATCHED" = false ]; then
+      echo "::error ::Branch name '$BRANCH_NAME' does not match allowed prefixes: ${{ env.prefixes }}"
+      exit 1
+    fi
+
+- name: Check branch name format
+  run: |
+    BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+    PREFIX="${{ steps.prefix_check.outputs.prefix }}"
+    REST="${BRANCH_NAME#$PREFIX}"
+    if [[ ! "$REST" =~ ^[a-z0-9-]+$ ]]; then
+      echo "::error ::Branch name '$BRANCH_NAME' must use only lowercase letters, numbers, and dashes after the prefix '$PREFIX'"
+      exit 1
+    fi
