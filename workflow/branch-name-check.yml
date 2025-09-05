@@ -1,34 +1,61 @@
-- name: Download config
-  run: |
-    curl -O https://raw.githubusercontent.com/city-of-saint-louis/.github/main/config/allowed-prefixes.yml
-    PREFIXES=$(jq -r '.allowed_prefixes | join(",")' allowed-prefixes.yml)
-    echo "prefixes=$PREFIXES" >> $GITHUB_ENV
+on:
+  workflow_call:
+    inputs:
+      exempt_branches:
+        required: false
+        type: string
+        default: "main"
 
-- name: Check branch prefix
-  id: prefix_check
-  run: |
-    BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-    MATCHED=false
-    PREFIX=""
-    for prefix in $(echo ${{ env.prefixes }} | tr "," "\n"); do
-      if [[ "$BRANCH_NAME" == "$prefix"* ]]; then
-        MATCHED=true
-        PREFIX="$prefix"
-        break
-      fi
-    done
-    echo "prefix=$PREFIX" >> $GITHUB_OUTPUT
-    if [ "$MATCHED" = false ]; then
-      echo "::error ::Branch name '$BRANCH_NAME' does not match allowed prefixes: ${{ env.prefixes }}"
-      exit 1
-    fi
+jobs:
+  branch-name-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download config
+        run: |
+          curl -O https://raw.githubusercontent.com/city-of-saint-louis/.github/main/config/allowed-prefixes.yml
+          PREFIXES=$(jq -r '.allowed_prefixes | join(",")' allowed-prefixes.yml)
+          echo "prefixes=$PREFIXES" >> $GITHUB_ENV
 
-- name: Check branch name format
-  run: |
-    BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-    PREFIX="${{ steps.prefix_check.outputs.prefix }}"
-    REST="${BRANCH_NAME#$PREFIX}"
-    if [[ ! "$REST" =~ ^[a-z0-9-]+$ ]]; then
-      echo "::error ::Branch name '$BRANCH_NAME' must use only lowercase letters, numbers, and dashes after the prefix '$PREFIX'"
-      exit 1
-    fi
+      - name: Check branch prefix
+        id: branch_prefix_check
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          EXEMPT_BRANCHES="${{ inputs.exempt_branches }}"
+          for exempt in $(echo $EXEMPT_BRANCHES | tr "," "\n"); do
+            if [ "$BRANCH_NAME" = "$exempt" ]; then
+              echo "Skipping branch prefix check for exempt branch: $BRANCH_NAME"
+              exit 0
+            fi
+          done
+          MATCHED=false
+          PREFIX=""
+          for prefix in $(echo ${{ env.prefixes }} | tr "," "\n"); do
+            if [[ "$BRANCH_NAME" == "$prefix"* ]]; then
+              MATCHED=true
+              PREFIX="$prefix"
+              break
+            fi
+          done
+          echo "prefix=$PREFIX" >> $GITHUB_OUTPUT
+          if [ "$MATCHED" = false ]; then
+            echo "::error ::Branch name '$BRANCH_NAME' does not match allowed prefixes: ${{ env.prefixes }}"
+            exit 1
+          fi
+
+      - name: Check branch name format
+        id: branch_name_check
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          EXEMPT_BRANCHES="${{ inputs.exempt_branches }}"
+          for exempt in $(echo $EXEMPT_BRANCHES | tr "," "\n"); do
+            if [ "$BRANCH_NAME" = "$exempt" ]; then
+              echo "Skipping branch name format check for exempt branch: $BRANCH_NAME"
+              exit 0
+            fi
+          done
+          PREFIX="${{ steps.branch_prefix_check.outputs.prefix }}"
+          REST="${BRANCH_NAME#$PREFIX}"
+          if [[ ! "$REST" =~ ^[a-z0-9-]+$ ]]; then
+            echo "::error ::Branch name '$BRANCH_NAME' must use only lowercase letters, numbers, and dashes after the prefix '$PREFIX'"
+            exit 1
+          fi
