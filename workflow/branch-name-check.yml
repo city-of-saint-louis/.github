@@ -1,10 +1,5 @@
 on:
   workflow_call:
-    inputs:
-      exempt_branches:
-        required: false
-        type: string
-        default: "main"
 
 jobs:
   branch-name-check:
@@ -23,13 +18,6 @@ jobs:
         id: branch_prefix_check
         run: |
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          EXEMPT_BRANCHES="${{ inputs.exempt_branches }}"
-          for exempt in $(echo $EXEMPT_BRANCHES | tr "," "\n"); do
-            if [ "$BRANCH_NAME" = "$exempt" ]; then
-              echo "Skipping branch prefix check for exempt branch: $BRANCH_NAME"
-              exit 0
-            fi
-          done
           MATCHED=false
           PREFIX=""
           for prefix in $(echo ${{ env.prefixes }} | tr "," "\n"); do
@@ -49,13 +37,6 @@ jobs:
         id: branch_name_check
         run: |
           BRANCH_NAME="${GITHUB_REF#refs/heads/}"
-          EXEMPT_BRANCHES="${{ inputs.exempt_branches }}"
-          for exempt in $(echo $EXEMPT_BRANCHES | tr "," "\n"); do
-            if [ "$BRANCH_NAME" = "$exempt" ]; then
-              echo "Skipping branch name format check for exempt branch: $BRANCH_NAME"
-              exit 0
-            fi
-          done
           PREFIX="${{ steps.branch_prefix_check.outputs.prefix }}"
           REST="${BRANCH_NAME#$PREFIX}"
           PATTERN="${{ env.pattern }}"
