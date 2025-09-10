@@ -24,13 +24,13 @@ This workflow can be used in organizational repositories to require that a featu
 name: Validate Branch Name
 
 on:
-  push:
+  pull_request:
     branches:
-      - '**'
+      - main
 
 jobs:
   branch-name-check:
-    uses: city-of-saint-louis/.github/workflow/branch-name-check.yml@main
+    uses: city-of-saint-louis/.github/.github/workflows/branch-name-check.yml@main
 ```
 4. In the target repository, navigate to `Settings > Branches`
 5. Under `Branch protection rules`, click `Add rule`
