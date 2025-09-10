@@ -5,12 +5,17 @@ jobs:
   branch-name-check:
     runs-on: ubuntu-latest
     steps:
+      - name: Install yq
+        run: |
+          sudo wget https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64 -O /usr/bin/yq
+          sudo chmod +x /usr/bin/yq
+
       - name: Download config
         run: |
           curl -O https://raw.githubusercontent.com/city-of-saint-louis/.github/main/config/allowed-prefixes.yml
           curl -O https://raw.githubusercontent.com/city-of-saint-louis/.github/main/config/branch-name-pattern.yml
-          PREFIXES=$(jq -r '.allowed_prefixes | join(",")' allowed-prefixes.yml)
-          PATTERN=$(jq -r '.pattern' branch-name-pattern.yml)
+          PREFIXES=$(yq '.allowed_prefixes | join(",")' allowed-prefixes.yml)
+          PATTERN=$(yq '.pattern' branch-name-pattern.yml)
           echo "prefixes=$PREFIXES" >> $GITHUB_ENV
           echo "pattern=$PATTERN" >> $GITHUB_ENV
 
