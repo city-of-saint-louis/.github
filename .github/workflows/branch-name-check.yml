@@ -22,7 +22,7 @@ jobs:
       - name: Check branch prefix
         id: branch_prefix_check
         run: |
-          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
           MATCHED=false
           PREFIX=""
           for prefix in $(echo ${{ env.prefixes }} | tr "," "\n"); do
@@ -41,7 +41,7 @@ jobs:
       - name: Check branch name format
         id: branch_name_check
         run: |
-          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          BRANCH_NAME="${GITHUB_HEAD_REF:-${GITHUB_REF#refs/heads/}}"
           PREFIX="${{ steps.branch_prefix_check.outputs.prefix }}"
           REST="${BRANCH_NAME#$PREFIX}"
           PATTERN="${{ env.pattern }}"
