@@ -1,0 +1,11 @@
+# this configures the allowable standard branch name prefixes
+# (used by workflow\branch-name-check.yml)
+allowed_prefixes:
+  - bugfix/
+  - chore/
+  - cicd/
+  - docs/
+  - feature/
+  - hotfix/
+  - refactor/
+ 

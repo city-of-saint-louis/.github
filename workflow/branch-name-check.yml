@@ -1,0 +1,46 @@
+on:
+  workflow_call:
+
+jobs:
+  branch-name-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download config
+        run: |
+          curl -O https://raw.githubusercontent.com/city-of-saint-louis/.github/main/config/allowed-prefixes.yml
+          curl -O https://raw.githubusercontent.com/city-of-saint-louis/.github/main/config/branch-name-pattern.yml
+          PREFIXES=$(jq -r '.allowed_prefixes | join(",")' allowed-prefixes.yml)
+          PATTERN=$(jq -r '.pattern' branch-name-pattern.yml)
+          echo "prefixes=$PREFIXES" >> $GITHUB_ENV
+          echo "pattern=$PATTERN" >> $GITHUB_ENV
+
+      - name: Check branch prefix
+        id: branch_prefix_check
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          MATCHED=false
+          PREFIX=""
+          for prefix in $(echo ${{ env.prefixes }} | tr "," "\n"); do
+            if [[ "$BRANCH_NAME" == "$prefix"* ]]; then
+              MATCHED=true
+              PREFIX="$prefix"
+              break
+            fi
+          done
+          echo "prefix=$PREFIX" >> $GITHUB_OUTPUT
+          if [ "$MATCHED" = false ]; then
+            echo "::error ::Branch name '$BRANCH_NAME' does not match allowed prefixes: ${{ env.prefixes }}"
+            exit 1
+          fi
+
+      - name: Check branch name format
+        id: branch_name_check
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"
+          PREFIX="${{ steps.branch_prefix_check.outputs.prefix }}"
+          REST="${BRANCH_NAME#$PREFIX}"
+          PATTERN="${{ env.pattern }}"
+          if [[ ! "$REST" =~ $PATTERN ]]; then
+            echo "::error ::Branch name '$BRANCH_NAME' must match pattern '$PATTERN' after the prefix '$PREFIX'"
+            exit 1
+          fi
