@@ -3,6 +3,7 @@
 allowed_prefixes:
   - bugfix/
   - chore/
+  - cicd/
   - docs/
   - feature/
   - hotfix/
